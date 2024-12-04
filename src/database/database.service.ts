@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { execSync } from 'child_process';
-import { createConnection, DataSource, DataSourceOptions, getConnectionManager } from 'typeorm';
+import { DataSource, DataSourceOptions } from 'typeorm';
 
 import { TenancyService } from 'src/tenancy/tenancy.service';
 
@@ -78,16 +77,6 @@ export class DatabaseService {
     if (result.length === 0) {
       await this.defaultDataSource.query(`CREATE DATABASE ${tenantId}`);
     }
-  }
-
-  private runMigrations(tenantId: string, connectionString: string) {
-    const databaseUrl = this.configService.getOrThrow('DATABASE_URL');
-    process.env.DATABASE_URL = connectionString;
-    const output = execSync('typeorm migration:run', {
-      encoding: 'utf-8',
-    });
-    this.logger.log(`Migrations ran for tenant ${tenantId}: ${output}`);
-    process.env.DATABASE_URL = databaseUrl;
   }
 
   getDatabase() {

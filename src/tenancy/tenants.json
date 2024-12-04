@@ -1,3 +1,4 @@
 {
-  "tenant1": "postgresql://postgres:postgres@localhost:5432/tenant1"
+  "tenant1": "postgresql://postgres:postgres@localhost:5432/tenant1",
+  "tenant2": "postgresql://postgres:postgres@localhost:5432/tenant2"
 }
