@@ -1,7 +1,6 @@
 
 import { DataSource, DataSourceOptions } from 'typeorm';
 
-// Change the following line to match the name of the app
 const dataSourceOptions = {
   type: 'postgres',
   host: 'localhost',
