@@ -1,8 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { DataSource, DataSourceOptions } from 'typeorm';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { ConfigType } from '@nestjs/config';
+import { DataSource, DataSourceOptions, Repository } from 'typeorm';
 
 import { TenancyService } from 'src/tenancy/tenancy.service';
+import { DataSourceConfig } from './datasource.config';
+import { Tenant } from 'src/tenancy/entities/tanant.entity';
 
 @Injectable()
 export class DatabaseService {
@@ -12,21 +14,23 @@ export class DatabaseService {
 
   constructor(
     private readonly tenancyService: TenancyService,
-    private readonly configService: ConfigService,
+    @Inject(DataSourceConfig.KEY)
+    private readonly dataSourceConfig: ConfigType<typeof DataSourceConfig>,
   ) {
   }
 
   private async initializeDefaultConnection() {
     const defaultDataSourceOptions: DataSourceOptions = {
-      type: 'postgres',
-      // url: this.configService.get<string>('DATABASE_URL'),
-      host: 'localhost',
-      username: 'postgres',
-      password: 'postgres',
-      database: 'postgres',
-      logging: true,
-      port: 5432,
-      entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+      type: this.dataSourceConfig.type,
+      host: this.dataSourceConfig.host,
+      username: this.dataSourceConfig.username,
+      password: this.dataSourceConfig.password,
+      database: this.dataSourceConfig.database,
+      port: this.dataSourceConfig.port,
+      logging: this.dataSourceConfig.logging,
+      entities: [__dirname + '/../tenancy/**/*.entity{.ts,.js}'],
+      migrations: [`${__dirname}/system-migrations/*{.ts,.js}`],
+      migrationsRun: true,
       synchronize: false,
     };
     this.defaultDataSource = new DataSource(defaultDataSourceOptions);
@@ -36,46 +40,58 @@ export class DatabaseService {
 
   async onModuleInit() {
     await this.initializeDefaultConnection();
-    await this.createTenantConnections();
+    await this._createTenantConnections();
   }
 
-  private async createTenantConnections() {
-    for (const [tenantId, connectionString] of Object.entries(
-      this.tenancyService.getTenants(),
-    )) {
-      await this.createTenantConnection(tenantId, connectionString);
-      // this.runMigrations(tenantId, connectionString);
+  private _createConnectionString(tenant: Tenant): string {
+    return `${tenant.connectionType}://${tenant.username}:${tenant.password}@${tenant.host}:${tenant.port}/${tenant.database}`;
+  }
+
+  private async _createTenantConnections() {
+    const tenantRepository: Repository<Tenant> = this.defaultDataSource.getRepository(Tenant);
+    const tenants = await tenantRepository.find();
+
+    for (const tenant of tenants) {
+      const connectionsString = this._createConnectionString(tenant);
+      await this._createTenantConnection(tenant, connectionsString);
     }
+
+    await this.defaultDataSource.close();
+    this.logger.log('Default connection closed');
   }
 
-  private async createTenantConnection(
-    tenantId: string,
+  private async _createTenantConnection(
+    tenant: Tenant,
     connectionString: string,
   ) {
-    await this.createDatabaseIfNotExists(tenantId);
+    await this._createDatabaseIfNotExists(tenant.database);
+
     const dataSourceOptions: DataSourceOptions = {
-      type: 'postgres',
+      type: tenant.connectionType as any,
       url: connectionString,
-      entities: [__dirname + '/../**/*.entity{.ts,.js}'],
       synchronize: false,
       migrationsRun: true,
+      entities: [__dirname + '/../**/*.entity{.ts,.js}'],
       migrations: [__dirname + '/migrations/*{.ts,.js}'],
     };
+
     const dataSource = new DataSource(dataSourceOptions);
     await dataSource.initialize();
 
-    this.tenantConnections.set(tenantId, dataSource);
+    this.tenantConnections.set(tenant.id, dataSource);
+    this.logger.log(`Initialized connection ${tenant.database}`);
   }
 
-  private async createDatabaseIfNotExists(tenantId: string) {
+  private async _createDatabaseIfNotExists(database: string) {
     const result = await this.defaultDataSource.query(`
         SELECT 1
         FROM pg_database
-        WHERE datname = '${tenantId}'    
+        WHERE datname = '${database}'    
     `);
 
-    if (result.length === 0) {
-      await this.defaultDataSource.query(`CREATE DATABASE ${tenantId}`);
+    if (!result.length) {
+      this.logger.log(`Creating database ${database}`);
+      await this.defaultDataSource.query(`CREATE DATABASE ${database}`);
     }
   }
 

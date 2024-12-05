@@ -4,5 +4,5 @@ services:
     ports:
       - 5432:5432
     environment:
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: nestjs-multitenancy
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: nestjs-typeorm-multi-tenancy
