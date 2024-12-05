@@ -1,15 +1,14 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
-import { TenancyModule } from '../tenancy/tenancy.module';
-import { DataSourceConfig } from './datasource.config';
+import { TenancyModule } from 'src/tenancy/tenancy.module';
 import { DatabaseService } from './database.service';
+import { DataSourceConfig } from './datasource.config';
 
 @Module({
   imports: [
-    ConfigModule,
+    TenancyModule,
     ConfigModule.forFeature(DataSourceConfig),
-    TenancyModule
   ],
   providers: [DatabaseService],
   exports: [DatabaseService],

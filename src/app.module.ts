@@ -15,7 +15,7 @@ import { UsersModule } from './users/users.module';
   ],
 })
 export class AppModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(TenancyMiddleware).forRoutes('*');
-  }
+  // configure(consumer: MiddlewareConsumer) {
+  //   consumer.apply(TenancyMiddleware).forRoutes('*');
+  // }
 }

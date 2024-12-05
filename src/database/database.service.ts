@@ -1,22 +1,29 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
 import { DataSource, DataSourceOptions, Repository } from 'typeorm';
+import { ClsService } from 'nestjs-cls';
 
-import { TenancyService } from 'src/tenancy/tenancy.service';
-import { DataSourceConfig } from './datasource.config';
 import { Tenant } from 'src/tenancy/entities/tanant.entity';
+import { TENANT_KEY } from 'src/tenancy/tenancy.constants';
+import { DataSourceConfig } from './datasource.config';
 
 @Injectable()
-export class DatabaseService {
+export class DatabaseService implements OnModuleDestroy {
   private readonly logger = new Logger(DatabaseService.name);
   private tenantConnections = new Map<string, DataSource>();
   private defaultDataSource: DataSource;
 
   constructor(
-    private readonly tenancyService: TenancyService,
     @Inject(DataSourceConfig.KEY)
     private readonly dataSourceConfig: ConfigType<typeof DataSourceConfig>,
+    private readonly cls: ClsService,
   ) {
+  }
+  async onModuleDestroy() {
+    for (const [tenantId, dataSource] of this.tenantConnections) {
+      await dataSource.destroy();
+      this.logger.log(`Closed connection for tenant ${tenantId}`);
+    }
   }
 
   private async initializeDefaultConnection() {
@@ -33,6 +40,7 @@ export class DatabaseService {
       migrationsRun: true,
       synchronize: false,
     };
+
     this.defaultDataSource = new DataSource(defaultDataSourceOptions);
     await this.defaultDataSource.initialize();
     this.logger.log('Default connection initialized');
@@ -56,7 +64,7 @@ export class DatabaseService {
       await this._createTenantConnection(tenant, connectionsString);
     }
 
-    await this.defaultDataSource.close();
+    await this.defaultDataSource.destroy();
     this.logger.log('Default connection closed');
   }
 
@@ -96,8 +104,8 @@ export class DatabaseService {
   }
 
   getDataSource() {
-    return this.tenantConnections.get(
-      this.tenancyService.getTenantContext().tenantId,
-    );
+    const tenantId = this.cls.get(TENANT_KEY);
+
+    return this.tenantConnections.get(tenantId);
   }
 }
