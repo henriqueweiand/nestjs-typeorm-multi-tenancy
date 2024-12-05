@@ -95,7 +95,7 @@ export class DatabaseService {
     }
   }
 
-  getDatabase() {
+  getDataSource() {
     return this.tenantConnections.get(
       this.tenancyService.getTenantContext().tenantId,
     );

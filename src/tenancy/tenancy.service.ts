@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AsyncLocalStorage } from 'async_hooks';
 
-import { TenantContext } from './interfaces/tenant-context.interface';
+import { TenantContext } from './tenant-context.interface';
 
 @Injectable()
 export class TenancyService {
