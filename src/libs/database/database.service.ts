@@ -1,14 +1,14 @@
-import { Inject, Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
 import { DataSource, DataSourceOptions, Repository } from 'typeorm';
 import { ClsService } from 'nestjs-cls';
 
-import { Tenant } from 'src/tenancy/entities/tanant.entity';
-import { TENANT_KEY } from 'src/tenancy/tenancy.constants';
+import { Tenant } from 'src/libs/tenancy/entities/tanant.entity';
+import { TENANT_KEY } from 'src/libs/tenancy/tenancy.constants';
 import { DataSourceConfig } from './datasource.config';
 
 @Injectable()
-export class DatabaseService implements OnModuleDestroy {
+export class DatabaseService implements OnModuleDestroy, OnModuleInit {
   private readonly logger = new Logger(DatabaseService.name);
   private tenantConnections = new Map<string, DataSource>();
   private defaultDataSource: DataSource;
@@ -18,12 +18,6 @@ export class DatabaseService implements OnModuleDestroy {
     private readonly dataSourceConfig: ConfigType<typeof DataSourceConfig>,
     private readonly cls: ClsService,
   ) {
-  }
-  async onModuleDestroy() {
-    for (const [tenantId, dataSource] of this.tenantConnections) {
-      await dataSource.destroy();
-      this.logger.log(`Closed connection for tenant ${tenantId}`);
-    }
   }
 
   private async initializeDefaultConnection() {
@@ -49,6 +43,13 @@ export class DatabaseService implements OnModuleDestroy {
   async onModuleInit() {
     await this.initializeDefaultConnection();
     await this._createTenantConnections();
+  }
+
+  async onModuleDestroy() {
+    for (const [tenantId, dataSource] of this.tenantConnections) {
+      await dataSource.destroy();
+      this.logger.log(`Closed connection for tenant ${tenantId}`);
+    }
   }
 
   private _createConnectionString(tenant: Tenant): string {
@@ -79,7 +80,7 @@ export class DatabaseService implements OnModuleDestroy {
       url: connectionString,
       synchronize: false,
       migrationsRun: true,
-      entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+      entities: [__dirname + '/../../components/**/*.entity{.ts,.js}'],
       migrations: [__dirname + '/migrations/*{.ts,.js}'],
     };
 
@@ -91,11 +92,7 @@ export class DatabaseService implements OnModuleDestroy {
   }
 
   private async _createDatabaseIfNotExists(database: string) {
-    const result = await this.defaultDataSource.query(`
-        SELECT 1
-        FROM pg_database
-        WHERE datname = '${database}'    
-    `);
+    const result = await this.defaultDataSource.query(`SELECT 1 FROM pg_database WHERE datname = '${database}'`);
 
     if (!result.length) {
       this.logger.log(`Creating database ${database}`);
@@ -103,6 +100,9 @@ export class DatabaseService implements OnModuleDestroy {
     }
   }
 
+  /**
+   * Get the data source for the current tenant
+   */
   getDataSource() {
     const tenantId = this.cls.get(TENANT_KEY);
 

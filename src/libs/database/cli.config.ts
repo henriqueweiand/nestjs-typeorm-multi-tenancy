@@ -13,7 +13,7 @@ const dataSourceOptions = {
   username: configService.getOrThrow('DEFAULT_DB_USERNAME'),
   password: configService.getOrThrow('DEFAULT_DB_PASSWORD'),
   database: configService.getOrThrow('DEFAULT_DB_NAME'),
-  entities: [__dirname + '../../**/*.entity{.ts,.js}'],
+  entities: [__dirname + '../../components/**/*.entity{.ts,.js}'],
   migrations: [`${__dirname}/migrations/*{.ts,.js}`],
   logging: true,
 } as DataSourceOptions;

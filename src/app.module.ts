@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
-import { DatabaseModule } from './database/database.module';
-import { TenancyModule } from './tenancy/tenancy.module';
-import { UsersModule } from './users/users.module';
+import { DatabaseModule } from './libs/database/database.module';
+import { TenancyModule } from './libs/tenancy/tenancy.module';
+import { UsersModule } from './components/users/users.module';
 
 @Module({
   imports: [
