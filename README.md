@@ -1,6 +1,6 @@
 # NestJS-Typeorm-Multi-Tenancy
 
-Multi Tenancy base example using TypeORM and NestJS
+Multi Tenancy base example using TypeORM and NestJS. Article about the project: https://medium.com/@henrique.weiand/nestjs-typeorm-and-multi-tenancy-a7f6176e8319
 
 ### How to run
 
